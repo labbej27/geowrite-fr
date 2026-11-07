@@ -1,0 +1,9 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "Compiler", "type": "shell", "command": "make", "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true } },
+    { "label": "Lancer dans VICE", "type": "shell", "command": "make run", "problemMatcher": [] },
+    { "label": "Envoyer au C64", "type": "shell", "command": "make deploy", "problemMatcher": [] }
+  ]
+}

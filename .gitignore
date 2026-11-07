@@ -1,0 +1,12 @@
+# Produits de compilation
+build/
+*.o
+__pycache__/
+.DS_Store
+
+# Sources de mist64, recuperees par tools/setup-vendor.sh
+vendor/
+
+# Donnees personnelles : documents, sauvegardes, reglages de la machine
+documents/
+config/

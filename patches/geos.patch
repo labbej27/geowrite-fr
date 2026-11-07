@@ -1,0 +1,270 @@
+diff --git a/config.inc b/config.inc
+index 8cae33c..232761d 100644
+--- a/config.inc
++++ b/config.inc
+@@ -13,8 +13,8 @@ config_inc = 1
+ ; the Berkeley Softworks GEOS 64 2.0 variant
+ ;------------------------
+ .ifdef bsw
+-	; BSW traps to counter tampering
+-	traps = 1
++	; geoWrite autonome : pieges anti-modification desactives
++	;traps = 1
+ .endif
+ 
+ ;------------------------
+diff --git a/drv/drv1541.s b/drv/drv1541.s
+index b26cd8f..a88d000 100644
+--- a/drv/drv1541.s
++++ b/drv/drv1541.s
+@@ -253,6 +253,27 @@ _GetNxtDirEntry:
+ 	ldy #$ff
+ 	MoveW diskBlkBuf, r1
+ 	bne GNDirEntry0
++.ifdef bsw
++	; apres le vrai repertoire et le bloc frontiere : repertoire de la cartouche
++	lda borderFlag
++	beq @border
++	cmp #$ff
++	bne GNDirEntry1
++@rom:	lda #$fe
++	sta borderFlag
++	lda #ROM_TRACK
++	sta r1L
++	lda #0
++	sta r1H
++	beq GNDirEntry0
++@border:
++	lda #$ff
++	sta borderFlag
++	jsr GetBorder
++	bnex GNDirEntry1
++	tya
++	bne @rom
++.else
+ 	lda borderFlag
+ 	bne GNDirEntry1
+ 	lda #$ff
+@@ -261,6 +282,7 @@ _GetNxtDirEntry:
+ 	bnex GNDirEntry1
+ 	tya
+ 	bne GNDirEntry1
++.endif
+ GNDirEntry0:
+ 	jsr ReadBuff
+ 	ldy #0
+@@ -1024,8 +1046,21 @@ ChngDskDv0:
+ 	pla
+ 	rts
+ 
++.ifdef bsw
++; geoWrite sur cartouche : la piste virtuelle 36 est lue depuis la ROM.
++ROM_TRACK = 36
++ROMRead = $0340
++.endif
++
+ __ReadBlock:
+ _ReadLink:
++.ifdef bsw
++	lda r1L
++	cmp #ROM_TRACK
++	bne @disk
++	jmp ROMRead
++@disk:
++.endif
+ 	jsr CheckParams_1
+ 	bcc RdBlock2
+ 	bbrf 6, curType, RdBlock0
+diff --git a/kernal/bswfont/bswfont.s b/kernal/bswfont/bswfont.s
+index 6f03ec3..8be18f5 100644
+--- a/kernal/bswfont/bswfont.s
++++ b/kernal/bswfont/bswfont.s
+@@ -63,6 +63,9 @@ BSWFont:
+ 	.byte $00,$00,$1f,$e0,$00,$00,$00,$02,$01,$00,$00,$00,$08,$08,$00,$00
+ 	.byte $00,$00,$10,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+ 	.byte $00
++.elseif .defined(bsw)
++	; geoWrite francais : accents a la place de symboles rares, voir tools/mkfont.py
++	.include "bswfont_fr.inc"
+ .elseif .defined(gateway_font)
+ 	; This is the updated version of the original BSW font:
+ 	; * The "C=" logo is the condensed variant.
+diff --git a/kernal/dlgbox/dlgbox1k.s b/kernal/dlgbox/dlgbox1k.s
+index fc15e9a..ffe8aa8 100644
+--- a/kernal/dlgbox/dlgbox1k.s
++++ b/kernal/dlgbox/dlgbox1k.s
+@@ -20,6 +20,9 @@
+ .segment "dlgbox1k"
+ 
+ DBIcPicNO:
++.ifdef bsw
++	.include "icons_fr_DBIcPicNO.inc"
++.else
+ 	.byte 5, %11111111, $80+1, %11111110, $db+8, 2, $80+6
+ 	     ;%11111111, %11111111, %11111111, %11111111, %11111111, %11111110
+ 	.byte %10000000, %00000000, %00000000, %00000000, %00000000, %00000011, $80+12
+@@ -38,8 +41,12 @@ DBIcPicNO:
+ 	     ;%11111111, %11111111, %11111111, %11111111, %11111111, %11111111
+ 	     ;%01111111, %11111111, %11111111, %11111111, %11111111, %11111111
+ 	.byte 6, %11111111, $80+1, %01111111, 5, %11111111
++.endif
+ 
+ DBIcPicYES:
++.ifdef bsw
++	.include "icons_fr_DBIcPicYES.inc"
++.else
+ 	.byte 5, %11111111, $80+1, %11111110, $db+8, 2, $80+6
+ 	     ;%11111111, %11111111, %11111111, %11111111, %11111111, %11111110
+ 	.byte %10000000, %00000000, %00000000, %00000000, %00000000, %00000011, $80+(5*6)
+@@ -58,8 +65,12 @@ DBIcPicYES:
+ 	     ;%11111111, %11111111, %11111111, %11111111, %11111111, %11111111
+ 	     ;%01111111, %11111111, %11111111, %11111111, %11111111, %11111111
+ 	.byte 6, %11111111, $80+1, %01111111, 5, %11111111
++.endif
+ 
+ DBIcPicOPEN:
++.ifdef bsw
++	.include "icons_fr_DBIcPicOPEN.inc"
++.else
+ 	.byte 5, %11111111, $80+1, %11111110, $db+8, 2, $80+6
+ 	     ;%11111111, %11111111, %11111111, %11111111, %11111111, %11111110
+ 	.byte %10000000, %00000000, %00000000, %00000000, %00000000, %00000011, $80+(9*6)
+@@ -78,8 +89,12 @@ DBIcPicOPEN:
+ 	     ;%11111111, %11111111, %11111111, %11111111, %11111111, %11111111
+ 	     ;%01111111, %11111111, %11111111, %11111111, %11111111, %11111111
+ 	.byte 6, %11111111, $80+1, %01111111, 5, %11111111
++.endif
+ 
+ DBIcPicDISK:
++.ifdef bsw
++	.include "icons_fr_DBIcPicDISK.inc"
++.else
+ 	.byte 5, %11111111, $80+1, %11111110, $db+8, 2, $80+6
+ 	     ;%11111111, %11111111, %11111111, %11111111, %11111111, %11111110
+ 	.byte %10000000, %00000000, %00000000, %00000000, %00000000, %00000011, $80+(9*6)
+@@ -98,6 +113,8 @@ DBIcPicDISK:
+ 	     ;%11111111, %11111111, %11111111, %11111111, %11111111, %11111111
+ 	     ;%01111111, %11111111, %11111111, %11111111, %11111111, %11111111
+ 	.byte 6, %11111111, $80+1, %01111111
++.endif
++
+ .ifdef bsw128 ; save 2 bytes
+ .assert * = DBIcPicCANCEL, error, "Code must run into DBIcPicCANCEL"
+ .else
+diff --git a/kernal/dlgbox/dlgbox2.s b/kernal/dlgbox/dlgbox2.s
+index d0c5037..89bcd56 100644
+--- a/kernal/dlgbox/dlgbox2.s
++++ b/kernal/dlgbox/dlgbox2.s
+@@ -16,6 +16,9 @@
+ .segment "dlgbox2"
+ 
+ DBIcPicCANCEL:
++.ifdef bsw
++	.include "icons_fr_DBIcPicCANCEL.inc"
++.else
+ 	.byte 5, %11111111, $80+2, %11111110
+ 	.byte %10000000, 4, %00000000, $80+2, %00000011
+ 	.byte %10000000, 4, %00000000, $80+(9*6)+2, %00000011
+@@ -38,11 +41,16 @@ DBIcPicCANCEL:
+ 	.byte %10000000, 4, %00000000, $80+2, %00000011
+ 	.byte %10000000, 4, %00000000, $80+1, %00000011
+ 	.byte 6, %11111111, $80+1, %01111111
++.endif
++
+ .ifndef bsw128 ; save 2 bytes
+ 	.byte 5, %11111111
+ .endif
+ 
+ DBIcPicOK:
++.ifdef bsw
++	.include "icons_fr_DBIcPicOK.inc"
++.else
+ 	.byte 5, %11111111, $80+2, %11111110
+ 	.byte %10000000, 4, %00000000, $80+2, %00000011
+ 	.byte %10000000, 4, %00000000, $80+(9*6)+2, %00000011
+@@ -65,3 +73,5 @@ DBIcPicOK:
+ 	.byte %10000000, 4, %00000000, $80+2, %00000011
+ 	.byte %10000000, 4, %00000000, $80+1, %00000011
+ 	.byte 6, %11111111, $80+1, %01111111, 5, %11111111
++.endif
++
+diff --git a/kernal/load/load1c.s b/kernal/load/load1c.s
+index adc615e..c248fd8 100644
+--- a/kernal/load/load1c.s
++++ b/kernal/load/load1c.s
+@@ -19,6 +19,8 @@
+ DeskTopName:
+ .ifdef bsw128
+ 	.byte "128 DESKTOP", 0
++.elseif .defined(bsw)
++	.byte "GEOWRITE", 0
+ .elseif .defined(gateway)
+ 	.byte "GATEWAY", 0
+ 	.byte 0 ; PADDING
+@@ -34,10 +36,15 @@ DeskTopName:
+ _EnterDT_Str0:
+ .ifdef bsw128
+ 	.byte BOLDON, "Please insert a disk with the", 0
++.elseif .defined(bsw)
++	.byte BOLDON, "Ins{rez un disque", 0
+ .else
+ 	.byte BOLDON, "Please insert a disk", 0
+ .endif
+ _EnterDT_Str1:
++.ifdef bsw
++	.byte "de documents GEOS.", 0
++.else
+ .ifndef bsw128
+ 	.byte "with "
+ .endif
+@@ -57,3 +64,4 @@ _EnterDT_Str1:
+ 	.byte "1.5"
+ .endif
+ 	.byte " or higher", 0
++.endif
+diff --git a/kernal/panic/panic.s b/kernal/panic/panic.s
+index eabfc37..f561488 100644
+--- a/kernal/panic/panic.s
++++ b/kernal/panic/panic.s
+@@ -181,6 +181,8 @@ _PanicDB_Str:
+ 	.byte BOLDON
+ .ifdef wheels_size
+ 	.byte "Error near "
++.elseif .defined(bsw)
++	.byte "Erreur syst|me vers "
+ .else
+ 	.byte "System error near "
+ .endif
+diff --git a/kernal/start/start64.s b/kernal/start/start64.s
+index bf5fc92..71125f2 100644
+--- a/kernal/start/start64.s
++++ b/kernal/start/start64.s
+@@ -133,6 +133,14 @@ ASSERT_NOT_BELOW_IO
+ 
+ 	;
+ 	jsr FirstInit
++.ifdef bsw
++	; geoWrite autonome : selectionne le pilote d'imprimante du disque
++	ldy #PrinterNameEnd - PrinterName - 1
++@p:	lda PrinterName,y
++	sta PrntFilename,y
++	dey
++	bpl @p
++.endif
+ 	jsr MouseInit
+ .ifdef drv1541parallel
+ 	LoadB NUMDRV, 0
+@@ -160,6 +168,13 @@ ASSERT_NOT_BELOW_IO
+ 	sta _driveType,y
+ .endif
+ 
++.ifdef bsw
++	jmp OrigResetHandle
++PrinterName:
++	.byte "MPS-803", 0
++PrinterNameEnd:
++.endif
++
+ ; This is the original code the cbmfiles version
+ ; has at $5000.
+ OrigResetHandle:

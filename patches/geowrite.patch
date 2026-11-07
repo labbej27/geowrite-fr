@@ -1,0 +1,295 @@
+diff --git a/Makefile b/Makefile
+index e1e4b13..b071a0f 100755
+--- a/Makefile
++++ b/Makefile
+@@ -7,6 +7,8 @@ ifeq ($(LOCALE),en)
+ ASFLAGS+=-D LOCALE=0 -I en
+ else ifeq ($(LOCALE),de)
+ ASFLAGS+=-D LOCALE=1 -I de
++else ifeq ($(LOCALE),fr)
++ASFLAGS+=-D LOCALE=2 -I fr
+ else
+ $(error Unsupported LOCALE)
+ endif
+diff --git a/config.inc b/config.inc
+index f6b448b..cbd6241 100644
+--- a/config.inc
++++ b/config.inc
+@@ -1,10 +1,13 @@
+ LOCALE_EN		= 0
+ LOCALE_DE		= 1
++LOCALE_FR		= 2
+ 
+ LANG_EN			= 0
+ LANG_DE			= 1
++LANG_FR			= 2
+ CHAR_ENCODING_ASCII	= 0
+ CHAR_ENCODING_DE	= 1
++CHAR_ENCODING_FR	= 2
+ 
+ .if LOCALE=LOCALE_EN
+ 
+@@ -36,4 +39,19 @@ CHAR_ENCODING_DE	= 1
+ 	PROT_SERIAL_SECTOR	= 8
+ 	SERIAL			= 0	; not installed
+ 
++.elseif LOCALE=LOCALE_FR
++
++	LANG			= LANG_FR
++	SUBMENU_Y		= 15
++
++	DECIMAL_SEPARATOR	= ','
++	CHAR_ENCODING		= CHAR_ENCODING_FR
++	DATE_FORMAT_US		= 0
++
++	PROT_EXEC_TRACK		= 13
++	PROT_EXEC_SECTOR	= 7
++	PROT_SERIAL_TRACK	= 14
++	PROT_SERIAL_SECTOR	= 13
++	SERIAL			= $58B5
++
+ .endif
+diff --git a/geoWrite-0.s b/geoWrite-0.s
+index e8c9e3f..47f6f01 100644
+--- a/geoWrite-0.s
++++ b/geoWrite-0.s
+@@ -1059,6 +1059,8 @@ menu_file:
+         .word   75			; right
+ .elseif LANG=LANG_DE
+ 	.word	106
++.elseif LANG=LANG_FR
++        .word   85
+ .endif
+ 	.byte   VERTICAL | UN_CONSTRAINED | 7
+ 
+@@ -1099,6 +1101,9 @@ menu_edit:
+ .elseif LANG=LANG_DE
+ 	.word   56
+ 	.word   147
++.elseif LANG=LANG_FR
++        .word   61
++        .word   120
+ .endif
+ 	.byte   VERTICAL | UN_CONSTRAINED | 3
+ 
+@@ -1123,6 +1128,9 @@ menu_paste:
+ .elseif LANG=LANG_DE
+         .word   148
+         .word   211
++.elseif LANG=LANG_FR
++        .word   121
++        .word   184
+ .endif
+ 	.byte   VERTICAL | UN_CONSTRAINED | 2
+ 
+@@ -1144,6 +1152,9 @@ menu_options_bottom:
+ .elseif LANG=LANG_DE
+         .word   78
+         .word   189
++.elseif LANG=LANG_FR
++        .word   84
++        .word   195
+ .endif
+ menu_options_count:
+ 	.byte   VERTICAL | UN_CONSTRAINED | 8
+@@ -1189,6 +1200,9 @@ menu_page:
+ .elseif LANG=LANG_DE
+         .word   100
+         .word   195
++.elseif LANG=LANG_FR
++        .word   106
++        .word   201
+ .endif
+ 	.byte   VERTICAL | UN_CONSTRAINED | 7
+ 
+@@ -1230,6 +1244,9 @@ menu_fontnames_bottom:
+ .elseif LANG=LANG_DE
+ 	.word   128
+ 	.word   203
++.elseif LANG=LANG_FR
++        .word   134
++        .word   209
+ .endif
+ menu_fontnames_items:
+ 	.byte   VERTICAL | UN_CONSTRAINED | 1	; will be overwritten
+@@ -1276,6 +1293,9 @@ menu_fontpoints_bottom:
+ .elseif LANG=LANG_DE
+ 	.word   204
+ 	.word   264
++.elseif LANG=LANG_FR
++        .word   210
++        .word   270
+ .endif
+ menu_fontpoints_items:
+ 	.byte   VERTICAL | UN_CONSTRAINED | 1	; will be overwritten
+@@ -1321,6 +1341,9 @@ menu_style:
+ .elseif LANG=LANG_DE
+ 	.word	162
+ 	.word	259
++.elseif LANG=LANG_FR
++        .word   164
++        .word   249
+ .endif
+ 	.byte VERTICAL | UN_CONSTRAINED | 7	; will be overwritten
+ 
+@@ -3885,12 +3908,16 @@ isAlphanumeric:
+ 	cmp     #'A'
+ .elseif CHAR_ENCODING=CHAR_ENCODING_DE
+ 	cmp     #'@'			; [XXX '§' in German GEOS, not alphanumeric!]
++.elseif CHAR_ENCODING=CHAR_ENCODING_FR
++	cmp     #'A'
+ .endif
+         bcc     @2
+ .if CHAR_ENCODING=CHAR_ENCODING_ASCII
+         cmp     #'Z'+1
+ .elseif CHAR_ENCODING=CHAR_ENCODING_DE
+         cmp     #']'+1
++.elseif CHAR_ENCODING=CHAR_ENCODING_FR
++        cmp     #'^'+1
+ .endif
+         bcc     @yes
+ @2:	cmp     #'a'
+@@ -3899,6 +3926,8 @@ isAlphanumeric:
+         cmp     #'z'+1
+ .elseif CHAR_ENCODING=CHAR_ENCODING_DE
+         cmp     #'~'+1
++.elseif CHAR_ENCODING=CHAR_ENCODING_FR
++        cmp     #'~'+1
+ .endif
+         bcc     @yes
+ @3:	cmp     #'_'
+@@ -4806,6 +4835,45 @@ scrrecvtab_deskacc:
+ scrrecvtab_preview:
+ 	.word   MEM_SCRRECV + 808
+ 	.byte             0,   0,  40,  36
++.elseif LANG=LANG_FR
++;              r1L/r1H  r2L  r2H  r3L  r3H
++scrrecvtabs:
++scrrecvtab_geos:
++	.word   MEM_SCRRECV
++	.byte             0,  15,  10, 128
++scrrecvtab_file:
++	.word   MEM_SCRRECV
++	.byte             3,  15,   8, 100
++scrrecvtab_edit:
++	.word   MEM_SCRRECV
++	.byte             7,  15,   9,  44
++scrrecvtab_paste:
++	.word   MEM_SCRRECV + 1408
++	.byte            15,  15,   9,  30
++scrrecvtab_options:
++	.word   MEM_SCRRECV
++	.byte            10,  15,  15, 114
++scrrecvtab_page:
++	.word   MEM_SCRRECV
++	.byte            13,  15,  13, 100
++scrrecvtab_font:
++	.word   MEM_SCRRECV
++	.byte            16,  15,  11, 114
++scrrecvtab_fontsize:
++	.word   MEM_SCRRECV + 1408
++	.byte            26,  15,   9, 114
++scrrecvtab_style:
++	.word   MEM_SCRRECV
++	.byte            20,  15,  12, 100
++scrrecvtab_dlgbox:
++	.word   MEM_SCRRECV
++	.byte             8,  32,  25, 104
++scrrecvtab_deskacc:
++	.word   MEM_SCRRECV
++	.byte             0,   0,  40,  36
++scrrecvtab_preview:
++	.word   MEM_SCRRECV + 808
++	.byte             0,   0,  40,  36
+ .endif
+ 
+ ;---------------------------------------------------------------
+diff --git a/geoWrite-1.s b/geoWrite-1.s
+index 5c68008..feb9795 100644
+--- a/geoWrite-1.s
++++ b/geoWrite-1.s
+@@ -523,7 +523,9 @@ decryptR0:
+ ;            serial number matches.
+ ;---------------------------------------------------------------
+ checkSerialOrInstall:
+-	lda     serial
++	rts				; protection neutralisee : meme taille que lda serial
++	nop
++	nop
+         ora     serial+1		; does app have a serial?
+         beq     @install		; no, then install
+ 
+diff --git a/geoWrite-7.s b/geoWrite-7.s
+index da66f61..83cac0e 100644
+--- a/geoWrite-7.s
++++ b/geoWrite-7.s
+@@ -430,6 +430,7 @@ L3601:  rts                                     ; 3601 60
+ ; ----------------------------------------------------------------------------
+ L3602:  lda     L4185                           ; 3602 AD 85 41                 ..A
+         bne     L3624                           ; 3605 D0 1D                    ..
++        sta     PrnPageFeed			; A = 0 : pas de saut sur la nouvelle feuille
+ 	LoadW   RecoverVector, 0
+ 	LoadW   r0, dlgbox_insert_next_sheet                            ; 3613 A9 3E                    .>
+         jsr     DoDlgBox                        ; 3617 20 56 C2                  V.
+diff --git a/loadprinter_strings.inc b/loadprinter_strings.inc
+index eeb2d58..f0ed211 100644
+--- a/loadprinter_strings.inc
++++ b/loadprinter_strings.inc
+@@ -2,6 +2,8 @@ txt_no_printer:
+         .byte   BOLDON
+ .if LANG=LANG_DE
+         .byte   "Kein Druckertreiber aktiv."
++.elseif LANG=LANG_FR
++        .byte   "Aucun pilote d'imprimante."
+ .else
+         .byte   "No printer driver is selected."
+ .endif
+@@ -10,6 +12,8 @@ txt_no_printer:
+ 	.byte   64
+ .if LANG=LANG_DE
+         .byte   "Verwenden Sie 'Drucker w{hlen'"
++.elseif LANG=LANG_FR
++        .byte   "Copiez le pilote MPS-803"
+ .else
+         .byte   "Use 'select printer' on the"
+ .endif
+@@ -18,6 +22,8 @@ txt_no_printer:
+         .byte   80
+ .if LANG=LANG_DE
+         .byte   "unter deskTop."
++.elseif LANG=LANG_FR
++        .byte   "sur ce disque."
+ .else
+         .byte   "deskTop to choose a printer."
+ .endif
+@@ -26,6 +32,9 @@ txt_no_printer:
+ txt_reading_printer_driver:
+ .if LANG=LANG_DE
+         .byte   "bez}glich Druckertreiber"
++.elseif LANG=LANG_FR
++	.byte   BOLDON
++        .byte   "lecture du pilote."
+ .else
+ 	.byte   BOLDON
+         .byte   "reading printer driver."
+@@ -38,6 +47,8 @@ txt_cant_find_printer:
+         .byte   GOTOXY
+         .byte   80, 0
+         .byte   "@zu finden:"
++.elseif LANG=LANG_FR
++	.byte   "Pilote introuvable :"
+ .else
+ 	.byte   "Can't find printer driver named:"
+ .endif
+diff --git a/sym.inc b/sym.inc
+index c95722e..980e174 100644
+--- a/sym.inc
++++ b/sym.inc
+@@ -95,6 +95,7 @@ vars            := $0200
+ BACK_SCR_BASE   := $6000
+ PRINTBASE       := $7900
+ InitForPrint    := $7900
++PrnPageFeed     := $7918 ; pilote MPS-803 : avance restante, voir geowrite/mps803.s
+ StartPrint      := $7903
+ PrintBuffer     := $7906
+ StopPrint       := $7909
