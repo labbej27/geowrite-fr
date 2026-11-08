@@ -9,7 +9,7 @@
 - **Démarrage direct dans geoWrite** depuis une cartouche EasyFlash, sans deskTop ni disquette système.
 - **Tout en français** : menus, messages, boutons, règle.
 - **Accents à l'écran, dans les documents et à l'impression** : é è à ç ê ù ô î.
-- **Souris 1351** sur le port 1 (la souris USB du C64 Ultimate est vue comme une 1351).
+- **Souris 1351** sur le port 1 (la souris USB du C64 Ultimate est vue comme une 1351), **ou joystick** sur le port 1 ou 2 avec la cartouche joystick.
 - **Pilote Commodore MPS-803 / MPS-801** en mode graphique : tout ce qui est à l'écran s'imprime, polices comprises.
 - **Impression d'un simple message** : le papier s'arrête juste après la dernière ligne pour pouvoir déchirer. Un document de plusieurs pages garde ses sauts de page.
 
@@ -19,7 +19,7 @@
 
 ## Utilisation
 
-1. Copie [`dist/geowrite-fr.crt`](dist/geowrite-fr.crt) sur ta carte SD.
+1. Copie [`dist/geowrite-fr.crt`](dist/geowrite-fr.crt) sur ta carte SD. Si tu n'as pas de souris, prends [`dist/geowrite-fr-joystick.crt`](dist/geowrite-fr-joystick.crt) (voir plus bas).
 2. Monte une image `.d64` formatée GEOS sur le lecteur 8 : ce sera ton disque de documents. `make geowrite` en crée une vierge dans `geowrite/build/documents.d64`.
 3. Lance la cartouche.
 
@@ -40,6 +40,15 @@ Sans disque sur le lecteur 8, geoWrite affiche « Insérez un disque de document
 
 En échange, les symboles `{ | } ~ [ ] \ ^` ne sont plus disponibles dans la police système.
 
+### Cartouche joystick
+
+GEOS ne charge qu'un seul pilote de pointeur, et les pilotes souris et joystick ne tiennent pas ensemble dans la place prévue. Il y a donc deux cartouches :
+
+- `geowrite-fr.crt` : souris 1351 (ou souris USB du C64 Ultimate) ;
+- `geowrite-fr-joystick.crt` : joystick, sur le **port 1 ou le port 2**.
+
+Avec le joystick, le pointeur part lentement puis accélère si l'on garde le manche poussé. Le bouton de tir sert de clic. C'est le pilote joystick d'origine de GEOS, modifié pour lire aussi le port 2. Il fait toujours 378 octets et s'arrête juste avant les vecteurs du 6502 en `$FFFA`.
+
 ### Imprimer
 
 Imprimante sur le bus série, **périphérique 4**. Choisis le mode **Haute** dans la boîte d'impression : le mode Rapide utilise les caractères de l'imprimante, qui n'a pas les accents.
@@ -51,9 +60,10 @@ Imprimante sur le bus série, **périphérique 4**. Choisis le mode **Haute** da
 | C64 Ultimate Founders Edition, firmware 1.1.0, à 1 MHz | Testé : souris USB, création, enregistrement, impression sur MPS-803 |
 | Même machine avec turbo 64 MHz, JiffyDOS et REU | Création et enregistrement testés ; souris et impression pas encore vérifiées |
 | VICE 3.10 (cartouche EasyFlash, 1541, MPS-803 émulés) | Testé, sert de banc d'essai automatique |
-| C64 d'origine avec Kung Fu Flash 2 | **Pas encore testé** |
+| VICE 3.10, cartouche joystick | Testé : les quatre directions et les diagonales sur les ports 1 et 2, accélération, bords de l'écran, clic sur « Créer » |
+| C64 d'origine avec Kung Fu Flash 2 | La cartouche démarre, puis geoWrite demande un disque de documents que la Kung Fu Flash ne sait pas fournir (voir ci-dessous) |
 
-Sur un C64 d'origine, il faut une vraie souris 1351 (ou un adaptateur) et un vrai lecteur 1541 pour les documents : GEOS pilote le lecteur directement, ce que l'émulation de disque de Kung Fu Flash ne gère pas.
+Sur un C64 d'origine, sans souris, prends la cartouche joystick. Il faut aussi un vrai lecteur pour les documents : un 1541, ou un Pi1541 qui l'émule entièrement. GEOS pilote le lecteur directement, ce que l'émulation de disque de la Kung Fu Flash ne gère pas : avec une Kung Fu Flash seule, geoWrite ne peut pas ouvrir ni enregistrer de document. Pour ce cas, il y a [Plume](https://github.com/labbej27/plume64), un traitement de texte écrit de zéro qui fonctionne avec la Kung Fu Flash, à la souris ou au joystick.
 
 ## Compiler
 
@@ -64,7 +74,7 @@ brew install cc65 vice
 make geowrite
 ```
 
-Au premier build, `tools/setup-vendor.sh` clone les sources de [mist64/geos](https://github.com/mist64/geos) et [mist64/geowrite](https://github.com/mist64/geowrite) à la version testée, puis applique les modifications de [`patches/`](patches). Le résultat est dans `geowrite/build/geowrite.crt`.
+Au premier build, `tools/setup-vendor.sh` clone les sources de [mist64/geos](https://github.com/mist64/geos) et [mist64/geowrite](https://github.com/mist64/geowrite) à la version testée, puis applique les modifications de [`patches/`](patches). Le résultat est dans `geowrite/build/geowrite.crt`. `make geowrite-joystick` fait la cartouche joystick dans `geowrite/build/joystick/geowrite.crt`.
 
 ### Avec un C64 Ultimate sur le réseau
 

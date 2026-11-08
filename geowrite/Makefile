@@ -2,7 +2,9 @@
 V       := ../vendor
 KERNAL  := $(V)/geos/build/bsw/kernal_combined.prg
 CVT     := $(V)/geowrite/build/fr/geoWrite.cvt
-OUT     := build
+OUT     ?= build
+# Pilote du pointeur : mse1351 (souris 1351) ou joydrv (joystick, ports 1 et 2)
+INPUT   ?= mse1351
 
 .PHONY: all clean
 all: $(OUT)/geowrite.crt $(OUT)/documents.d64
@@ -13,7 +15,7 @@ $(KERNAL): FORCE
 	python3 -I ../tools/mkicons.py
 	# Ses regles ne suivent pas les .inc : tout recompiler.
 	rm -rf $(V)/geos/build/bsw
-	-$(MAKE) -C $(V)/geos VARIANT=bsw INPUT=mse1351 build/bsw/kernal_combined.prg
+	-$(MAKE) -C $(V)/geos VARIANT=bsw INPUT=$(INPUT) build/bsw/kernal_combined.prg
 $(CVT): FORCE
 	# Ses regles ne suivent pas les .inc : tout recompiler pour ne pas garder d'anciens textes.
 	$(MAKE) -C $(V)/geowrite clean

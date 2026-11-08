@@ -3,7 +3,7 @@ C64_IP ?= 192.168.1.128
 PRG    := build/$(NAME).prg
 SRC    := $(wildcard src/*.c) $(wildcard src/*.s)
 
-.PHONY: all run deploy clean stock restore mousetest geowrite geowrite-run
+.PHONY: all run deploy clean stock restore mousetest geowrite geowrite-run geowrite-joystick
 
 all: $(PRG)
 
@@ -39,6 +39,10 @@ vendor/geos/Makefile vendor/geowrite/Makefile:
 
 geowrite: vendor/geos/Makefile vendor/geowrite/Makefile
 	$(MAKE) -C geowrite
+
+# Variante joystick : build/joystick/geowrite.crt
+geowrite-joystick: vendor/geos/Makefile vendor/geowrite/Makefile
+	$(MAKE) -C geowrite INPUT=joydrv OUT=build/joystick
 
 # Installe et lance la cartouche ; le disque de documents de la SD est conserve.
 geowrite-run: geowrite

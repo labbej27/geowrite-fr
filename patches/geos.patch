@@ -75,6 +75,106 @@ index b26cd8f..a88d000 100644
  	jsr CheckParams_1
  	bcc RdBlock2
  	bbrf 6, curType, RdBlock0
+diff --git a/input/joydrv.s b/input/joydrv.s
+index 297f1cd..499e666 100644
+--- a/input/joydrv.s
++++ b/input/joydrv.s
+@@ -112,7 +112,7 @@ UpdateSpeed:
+ 	AddB mouseAccel, accelAcc
+ 	bcc CalculateDeltas   ; acceleration overflow
+ 	inc mouseSpeed
+-	bra CalculateDeltas
++	bcs CalculateDeltas   ; always: carry set by the overflow (saves 1 byte)
+ 
+ @1:	sta mouseSpeed        ; cap speed at max
+ 
+@@ -122,7 +122,7 @@ UpdateSpeed:
+ 	SubB mouseAccel, accelAcc
+ 	bcs CalculateDeltas   ; deceleration underflow
+ 	dec mouseSpeed
+-	bra CalculateDeltas
++	bcc CalculateDeltas   ; always: carry clear after the underflow (saves 1 byte)
+ 
+ @3:	sta mouseSpeed        ; cap speed at min
+ 
+@@ -199,10 +199,37 @@ UpdatePosX:
+ ; Return:    inputData  Updated if direction changed
+ ;            mouseData  Updated if fire button state changed
+ ;            pressFlag  Bits set to notify GEOS of new input
++;---------------------------------------------------------------
++CalcVector:
++	lda VectorMagnitude,x ; X component for current direction
++	sta r1L
++	lda VectorMagnitude+2,x ; Y component
++	sta r2L
++	lda VectorSign,x      ; sign bits for X and Y components
++	pha
++	ldx #r1
++	ldy #r0               ; contains mouseSpeed from UpdateSpeed
++	jsr BBMult            ; 8x8 multiply: speed * X-component
++	ldx #r2
++	jsr BBMult            ; 8x8 multiply: speed * Y-component
++	pla                   ; sign bits
++	pha
++	bpl @1                ; not negative, skip
++	ldx #r1
++	jsr Dnegate           ; negate 16-bit result for X
++@1:	pla
++	and #%01000000        ; sign bit for Y component
++	beq @2                ; not negative, skip
++	ldx #r2
++	jsr Dnegate           ; negate 16-bit result for Y
++@2:	rts
++
++
+ ;---------------------------------------------------------------
+ ReadInput:
+ 	LoadB cia1base, $ff   ; disable the keyboard
+ 	lda cia1base+1        ; read joystick port 1
++	and cia1base          ; and port 2: either one moves the pointer
+ 	eor #$ff              ; invert bits (so pressed = 1)
+ 	cmp lastRaw
+ 	sta lastRaw
+@@ -267,37 +294,10 @@ JoyDirectionTab:
+ ;            r0L current mouse speed.
+ ;
+ ; Return:    r1H calculated X-axis delta
+-;            r2H calculated Y-axis delta
+-;---------------------------------------------------------------
+-CalcVector:
+-	lda VectorMagnitude,x ; X component for current direction
+-	sta r1L
+-	lda VectorMagnitude+2,x ; Y component
+-	sta r2L
+-	lda VectorSign,x      ; sign bits for X and Y components
+-	pha
+-	ldx #r1
+-	ldy #r0               ; contains mouseSpeed from UpdateSpeed
+-	jsr BBMult            ; 8x8 multiply: speed * X-component
+-	ldx #r2
+-	jsr BBMult            ; 8x8 multiply: speed * Y-component
+-	pla                   ; sign bits
+-	pha
+-	bpl @1                ; not negative, skip
+-	ldx #r1
+-	jsr Dnegate           ; negate 16-bit result for X
+-@1:	pla
+-	and #%01000000        ; sign bit for Y component
+-	beq @2                ; not negative, skip
+-	ldx #r2
+-	jsr Dnegate           ; negate 16-bit result for Y
+-@2:	rts
+-
+-; Magnitude values for X and Y vector components for each of the 8 directions.
++;            r2H calculated Y-axis delta; Magnitude values for X and Y vector components for each of the 8 directions.
+ ; Diagonal components (181 = round(255 * sqrt(2))) are smaller than cardinal ones
+ ; (255, which acts as 1.0) to ensure consistent speed.
+-VectorMagnitude:
+-	.byte 255
++VectorMagnitude = * - 1  ; its first byte (255) is the last $ff of JoyDirectionTab
+ 	.byte 181
+ 	.byte 0
+ 	.byte 181
 diff --git a/kernal/bswfont/bswfont.s b/kernal/bswfont/bswfont.s
 index 6f03ec3..8be18f5 100644
 --- a/kernal/bswfont/bswfont.s
